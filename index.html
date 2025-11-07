@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système de Veille Cybersécurité</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 min-h-screen">
+    <div id="app"></div>
+
+    <script>
+        // Icons as SVG strings
+        const icons = {
+            shield: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+            search: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
+            bell: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+            globe: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+            plus: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+            trash: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+            externalLink: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
+            alertTriangle: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        };
+
+        // Application State
+        let state = {
+            keywords: ['ransomware', 'zero-day', 'vulnerability', 'breach'],
+            newKeyword: '',
+            selectedCategory: 'all',
+            searchTerm: '',
+            sources: [
+                { name: 'CERT-FR', url: 'https://www.cert.ssi.gouv.fr/', category: 'official', active: true },
+                { name: 'The Hacker News', url: 'https://thehackernews.com/', category: 'news', active: true },
+                { name: 'Bleeping Computer', url: 'https://www.bleepingcomputer.com/', category: 'news', active: true },
+                { name: 'Krebs on Security', url: 'https://krebsonsecurity.com/', category: 'analysis', active: true },
+                { name: 'Dark Reading', url: 'https://www.darkreading.com/', category: 'news', active: true },
+                { name: 'CVE Details', url: 'https://www.cvedetails.com/', category: 'technical', active: true }
+            ],
+            articles: [
+                {
+                    id: 1,
+                    title: "Nouvelle vulnérabilité critique dans Apache Struts",
+                    source: "CERT-FR",
+                    category: "vulnerability",
+                    date: "2025-11-07",
+                    severity: "critical",
+                    keywords: ["vulnerability", "apache"],
+                    url: "https://www.cert.ssi.gouv.fr/"
+                },
+                {
+                    id: 2,
+                    title: "Campagne de ransomware LockBit 4.0 cible les infrastructures critiques",
+                    source: "The Hacker News",
+                    category: "threat",
+                    date: "2025-11-06",
+                    severity: "high",
+                    keywords: ["ransomware", "threat"],
+                    url: "https://thehackernews.com/"
+                },
+                {
+                    id: 3,
+                    title: "Microsoft Patch Tuesday: 89 vulnérabilités corrigées",
+                    source: "Bleeping Computer",
+                    category: "patch",
+                    date: "2025-11-05",
+                    severity: "medium",
+                    keywords: ["patch", "microsoft"],
+                    url: "https://www.bleepingcomputer.com/"
+                },
+                {
+                    id: 4,
+                    title: "Zero-day dans Chrome exploité activement",
+                    source: "Dark Reading",
+                    category: "vulnerability",
+                    date: "2025-11-07",
+                    severity: "critical",
+                    keywords: ["zero-day", "vulnerability"],
+                    url: "https://www.darkreading.com/"
+                },
+                {
+                    id: 5,
+                    title: "Fuite de données chez un fournisseur cloud majeur",
+                    source: "Krebs on Security",
+                    category: "breach",
+                    date: "2025-11-06",
+                    severity: "high",
+                    keywords: ["breach", "data leak"],
+                    url: "https://krebsonsecurity.com/"
+                },
+                {
+                    id: 6,
+                    title: "Nouvelle technique d'évasion pour les malwares polymorphes",
+                    source: "The Hacker News",
+                    category: "threat",
+                    date: "2025-11-05",
+                    severity: "high",
+                    keywords: ["malware", "evasion"],
+                    url: "https://thehackernews.com/"
+                },
+                {
+                    id: 7,
+                    title: "CVE-2025-12345: RCE dans Wordpress core",
+                    source: "CVE Details",
+                    category: "vulnerability",
+                    date: "2025-11-04",
+                    severity: "critical",
+                    keywords: ["wordpress", "rce", "vulnerability"],
+                    url: "https://www.cvedetails.com/"
+                },
+                {
+                    id: 8,
+                    title: "Attaque par supply chain visant les développeurs JavaScript",
+                    source: "Bleeping Computer",
+                    category: "threat",
+                    date: "2025-11-03",
+                    severity: "high",
+                    keywords: ["supply chain", "javascript"],
+                    url: "https://www.bleepingcomputer.com/"
+                }
+            ]
+        };
+
+        // Helper functions
+        function getSeverityColor(severity) {
+            const colors = {
+                critical: 'bg-red-100 text-red-800 border-red-300',
+                high: 'bg-orange-100 text-orange-800 border-orange-300',
+                medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+                low: 'bg-gray-100 text-gray-800 border-gray-300'
+            };
+            return colors[severity] || colors.low;
+        }
+
+        function getFilteredArticles() {
+            return state.articles.filter(article => {
+                const matchesCategory = state.selectedCategory === 'all' || article.category === state.selectedCategory;
+                const matchesSearch = state.searchTerm === '' || 
+                    article.title.toLowerCase().includes(state.searchTerm.toLowerCase()) ||
+                    article.keywords.some(k => k.toLowerCase().includes(state.searchTerm.toLowerCase()));
+                return matchesCategory && matchesSearch;
+            });
+        }
+
+        function addKeyword() {
+            const keyword = state.newKeyword.trim().toLowerCase();
+            if (keyword && !state.keywords.includes(keyword)) {
+                state.keywords.push(keyword);
+                state.newKeyword = '';
+                render();
+            }
+        }
+
+        function removeKeyword(keyword) {
+            state.keywords = state.keywords.filter(k => k !== keyword);
+            render();
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function getCurrentDateTime() {
+            const now = new Date();
+            return now.toLocaleString('fr-FR', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Render function
+        function render() {
+            const filteredArticles = getFilteredArticles();
+            
+            document.getElementById('app').innerHTML = `
+                <div class="p-6 max-w-7xl mx-auto">
+                    <!-- Header -->
+                    <div class="glass rounded-2xl p-6 mb-6">
+                        <div class="flex items-center justify-between mb-4 flex-wrap gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 text-cyan-400">${icons.shield}</div>
+                                <div>
+                                    <h1 class="text-3xl font-bold text-white">Veille Cybersécurité</h1>
+                                    <p class="text-cyan-300">Surveillance temps réel des menaces et vulnérabilités</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-white text-sm">Dernière mise à jour</div>
+                                <div class="text-cyan-400 font-mono text-sm">${getCurrentDateTime()}</div>
+                            </div>
+                        </div>
+
+                        <!-- Search Bar -->
+                        <div class="relative">
+                            <div class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5">${icons.search}</div>
+                            <input
+                                type="text"
+                                placeholder="Rechercher dans les alertes..."
+                                value="${state.searchTerm}"
+                                oninput="state.searchTerm = this.value; render();"
+                                class="w-full pl-12 pr-4 py-3 glass rounded-xl text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left Sidebar -->
+                        <div class="space-y-6">
+                            <!-- Keywords -->
+                            <div class="glass rounded-2xl p-6">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-5 h-5 text-cyan-400">${icons.bell}</div>
+                                    <h2 class="text-xl font-bold text-white">Mots-clés surveillés</h2>
+                                </div>
+                                
+                                <div class="flex gap-2 mb-4">
+                                    <input
+                                        type="text"
+                                        value="${state.newKeyword}"
+                                        oninput="state.newKeyword = this.value;"
+                                        onkeypress="if(event.key === 'Enter') addKeyword();"
+                                        placeholder="Nouveau mot-clé"
+                                        class="flex-1 px-3 py-2 glass rounded-lg text-white placeholder-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                                    />
+                                    <button
+                                        onclick="addKeyword()"
+                                        class="px-3 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-colors"
+                                    >
+                                        <div class="w-5 h-5">${icons.plus}</div>
+                                    </button>
+                                </div>
+
+                                <div class="flex flex-wrap gap-2">
+                                    ${state.keywords.map(keyword => `
+                                        <span class="px-3 py-1 bg-cyan-500/20 border border-cyan-400/50 text-cyan-300 rounded-full text-sm flex items-center gap-2">
+                                            ${keyword}
+                                            <button
+                                                onclick="removeKeyword('${keyword}')"
+                                                class="hover:text-red-400 transition-colors"
+                                            >
+                                                <div class="w-3 h-3">${icons.trash}</div>
+                                            </button>
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Sources -->
+                            <div class="glass rounded-2xl p-6">
+                                <div class="flex items-center gap-2 mb-4">
+                                    <div class="w-5 h-5 text-cyan-400">${icons.globe}</div>
+                                    <h2 class="text-xl font-bold text-white">Sources actives</h2>
+                                </div>
+                                
+                                <div class="space-y-2">
+                                    ${state.sources.map(source => `
+                                        <div class="flex items-center justify-between p-3 bg-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                                            <span class="text-white text-sm">${source.name}</span>
+                                            <span class="px-2 py-1 rounded text-xs ${source.active ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}">
+                                                ${source.active ? 'Actif' : 'Inactif'}
+                                            </span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Content -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <!-- Category Filter -->
+                            <div class="glass rounded-2xl p-4">
+                                <div class="flex gap-2 overflow-x-auto">
+                                    ${['all', 'vulnerability', 'threat', 'breach', 'patch'].map(cat => `
+                                        <button
+                                            onclick="state.selectedCategory = '${cat}'; render();"
+                                            class="px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                                                state.selectedCategory === cat
+                                                    ? 'bg-cyan-500 text-white'
+                                                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                                            }"
+                                        >
+                                            ${cat === 'all' ? 'Tout' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Articles -->
+                            <div class="space-y-4">
+                                ${filteredArticles.length === 0 ? `
+                                    <div class="glass rounded-2xl p-12 text-center">
+                                        <div class="w-16 h-16 text-gray-400 mx-auto mb-4">${icons.alertTriangle}</div>
+                                        <p class="text-gray-300 text-lg">Aucun article trouvé</p>
+                                    </div>
+                                ` : filteredArticles.map(article => `
+                                    <div class="glass rounded-2xl p-6 hover:bg-white/15 transition-all">
+                                        <div class="flex items-start justify-between mb-3">
+                                            <div class="flex-1">
+                                                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                                    <span class="px-3 py-1 rounded-full text-xs font-semibold border ${getSeverityColor(article.severity)}">
+                                                        ${article.severity.toUpperCase()}
+                                                    </span>
+                                                    <span class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs">
+                                                        ${article.category}
+                                                    </span>
+                                                </div>
+                                                <h3 class="text-lg font-bold text-white mb-2">${article.title}</h3>
+                                                <div class="flex items-center gap-4 text-sm text-gray-300 flex-wrap">
+                                                    <span class="flex items-center gap-1">
+                                                        <div class="w-4 h-4">${icons.globe}</div>
+                                                        ${article.source}
+                                                    </span>
+                                                    <span>${formatDate(article.date)}</span>
+                                                </div>
+                                            </div>
+                                            <a
+                                                href="${article.url}"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="ml-4 p-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg transition-colors"
+                                            >
+                                                <div class="w-5 h-5">${icons.externalLink}</div>
+                                            </a>
+                                        </div>
+                                        
+                                        <div class="flex flex-wrap gap-2 mt-4">
+                                            ${article.keywords.map(kw => `
+                                                <span class="px-2 py-1 bg-purple-500/20 text-purple-300 rounded text-xs">
+                                                    #${kw}
+                                                </span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Initialize
+        render();
+    </script>
+</body>
+</html>
